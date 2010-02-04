@@ -507,8 +507,11 @@ gtk_label_split_text (GtkLabel *label)
 static gboolean
 is_ideogram (GdkWChar wc)
 {
-  return !(gdk_iswalnum (wc) || gdk_iswspace (wc) ||
-	   gdk_iswpunct (wc) || gdk_iswcntrl (wc));
+    if (gdk_iswalpha (wc) && (!gdk_iswupper (wc) && !gdk_iswlower (wc)))
+	return TRUE;
+    
+    return !(gdk_iswspace (wc) || gdk_iswalnum (wc) ||
+	     gdk_iswpunct (wc) || gdk_iswcntrl (wc));
 }
 
 /* this needs to handle white space better. */
