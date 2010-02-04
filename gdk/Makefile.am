@@ -21,6 +21,7 @@ libgdk_la_LDFLAGS = @STRIP_BEGIN@ \
 	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE) \
 	-release $(LT_RELEASE) \
 	-export-dynamic \
+	-no-undefined -Wl,--no-undefined \
 	@GLIB_DEPLIBS@	\
 	@x_ldflags@	\
 	@x_libs@	\
