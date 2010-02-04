@@ -238,12 +238,14 @@ gdk_string_to_compound_text (const gchar *str,
   if (res != Success)
     {
       property.encoding = None;
-      property.format = None;
+      property.format = 8;
       property.value = NULL;
       property.nitems = 0;
-    }
 
-  g_assert (property.encoding == gdk_atom_intern ("COMPOUND_TEXT", FALSE) && property.format == 8);
+      g_warning ("Error converting string to compound text.\n"
+		 "This might mean that your locale setting is supported\n"
+		 "by the C library but not by Xlib.");
+    }
 
   if (encoding)
     *encoding = property.encoding;
