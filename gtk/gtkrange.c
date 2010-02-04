@@ -829,7 +829,10 @@ gtk_range_expose (GtkWidget      *widget,
 	    (event->area.x + event->area.width <= 
 	     widget->allocation.width - trough_border) &&
 	    (event->area.y + event->area.height <= 
-	     widget->allocation.height - trough_border)))
+	     widget->allocation.height - trough_border)) ||
+	  gtk_style_get_prop_experimental (widget->style,
+					   "GtkRange::always_draw_trough",
+					   0))
 	gtk_range_draw_trough (range);
     }
   else if (event->window == widget->window)
