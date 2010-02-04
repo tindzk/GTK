@@ -33,6 +33,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <langinfo.h>
 
 #include "gtkrc.h"
 #include "gtkbindings.h"
@@ -440,7 +441,7 @@ _gtk_normalize_codeset (const char *codeset, int name_len)
 void
 gtk_rc_init (void)
 {
-  static gchar *locale_suffixes[3];
+  static gchar *locale_suffixes[8];
   static gint n_locale_suffixes = 0;
 
   gint i, j;
@@ -449,9 +450,7 @@ gtk_rc_init (void)
 
   if (!initted)
     {
-      gint length;
-      
-      char *locale = setlocale (LC_CTYPE, NULL);
+      char *locale = g_strdup (setlocale (LC_CTYPE, NULL));
       char *p;
       
       initted = TRUE;
@@ -470,39 +469,88 @@ gtk_rc_init (void)
 	   * We normalize the charset into a standard form,
 	   * which has all '-' and '_' characters removed,
 	   * and is lowercase.
+	   *
+	   * the search is done in that order:
+	   * gtkrc.ll_cc.lowercasecodeset
+	   * gtkrc.ll_cc.normalizedcodeset
+	   * gtkrc.ll.lowercasecodeset
+	   * gtkrc.ll.normalizedcodeset
+	   * gtkrc.lowercasecodeset
+	   * gtkrc.normalizedcodeset
+	   * gtkrc.ll_cc
+	   * gtkrc.ll
+	   * 
 	   */
-	  gchar *normalized_locale;
+	  char *codeset = NULL;
+	  char *normalized_codeset = NULL;
+	  char *cc = NULL;
+	  char *ll;
 
 	  p = strchr (locale, '@');
-	  length = p ? (p -locale) : strlen (locale);
+	  if (p)
+	    *p = '\0';
 
+	  codeset = nl_langinfo (CODESET);
+	  
 	  p = strchr (locale, '.');
+	  if (!codeset && p)
+	    codeset = p + 1;
 	  if (p)
+	    *p = '\0';
+	  
+	  if (codeset)
 	    {
-	      gchar *tmp1 = g_strndup (locale, p - locale + 1);
-	      gchar *tmp2 = _gtk_normalize_codeset (p + 1, length - (p - locale + 1));
+	      codeset = g_strdup (codeset);
 	      
-	      normalized_locale = g_strconcat (tmp1, tmp2, NULL);
-	      g_free (tmp1);
-	      g_free (tmp2);
-						 
-	      locale_suffixes[n_locale_suffixes++] = g_strdup (normalized_locale);
-	      length = p - locale;
+	      p = codeset;
+	      while (*p)
+		{
+		  /* tolower not used, because some locales are not
+		   * compatible with C locale in lowercasing ascii
+		   */
+		  if (*p >= 'A' && *p <= 'Z')
+		    *p = (*p) - 'A' + 'a';
+		  p++;
+		}
+	      
+	      normalized_codeset = _gtk_normalize_codeset(codeset, strlen (codeset));
+	      if (strcmp (normalized_codeset, codeset) == 0)
+		{
+		  g_free (normalized_codeset);
+		  normalized_codeset = NULL;
+		}
 	    }
-	  else
-	    normalized_locale = g_strndup (locale, length);
 	  
-	  p = strchr (normalized_locale, '_');
+	  p = strchr (locale, '_');
 	  if (p)
 	    {
-	      locale_suffixes[n_locale_suffixes++] = g_strndup (normalized_locale, length);
-	      length = p - normalized_locale;
+	      cc = p + 1;
+	      *p = '\0';
 	    }
-	  
-	  locale_suffixes[n_locale_suffixes++] = g_strndup (normalized_locale, length);
 
-	  g_free (normalized_locale);
+	  ll = locale;	
+	
+	  if (cc && codeset)
+	    locale_suffixes[n_locale_suffixes++] = g_strconcat (ll, "_", cc, ".", codeset, NULL);
+          if (cc && normalized_codeset)
+	    locale_suffixes[n_locale_suffixes++] = g_strconcat (ll, "_", cc, ".", normalized_codeset, NULL);
+	  if (codeset)
+            locale_suffixes[n_locale_suffixes++] = g_strconcat (ll, ".", codeset, NULL);
+          if (normalized_codeset)
+	    locale_suffixes[n_locale_suffixes++] = g_strconcat (ll, ".", normalized_codeset, NULL);
+	  if (codeset)
+	    locale_suffixes[n_locale_suffixes++] = g_strdup (codeset);
+	  if (normalized_codeset)
+	    locale_suffixes[n_locale_suffixes++] = g_strdup (normalized_codeset);
+	  if (cc)
+            locale_suffixes[n_locale_suffixes++] = g_strconcat (ll, "_", cc, NULL);
+	  locale_suffixes[n_locale_suffixes++] = g_strdup (ll);
+
+	  g_free (normalized_codeset);
+	  g_free (codeset);
 	}
+
+      g_free (locale);
     }
   
   i = 0;
