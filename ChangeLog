@@ -337,7 +337,7 @@ Fri Feb 16 20:09:42 2001  Owen Taylor  <otaylor@redhat.com>
 	for unshifted + and shifted = for non-us keyboards.
 	Make <Control>+ and <Control>- work as well as 
 	<Control>KP_Plus, <Control>KP_Minus for recursive
-	open/close. (#2682, René Seindal)
+	open/close. (#2682, RenÃ© Seindal)
 	
 Fri Feb 16 18:50:59 2001  Owen Taylor  <otaylor@redhat.com>
 
@@ -9739,7 +9739,7 @@ Wed Aug  5 21:12:37 1998  Stefan Jeske  <stefan@gtk.org>
 	* gtk/gtkctree.c:
 	Removed the auto_sort flag, replaced ctree->node_compare with
 	clist->compare all over the place, modified default_compare to
-	match clist's needs. Removed API´s : gtk_ctree_set_auto_sort,
+	match clist's needs. Removed APIÂ´s : gtk_ctree_set_auto_sort,
 	gtk_ctree_set_compare_func. Removed GtkCTreeCompareFunc typedef.
 
 	* gtk/testgtk.c: Modified clist/ctree samples to demonstrate
