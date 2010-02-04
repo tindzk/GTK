@@ -445,7 +445,6 @@ gdk_char_width (GdkFont *font,
   GdkFontPrivate *private;
   XCharStruct *chars;
   gint width;
-  guint ch = character & 0xff;  /* get rid of sign-extension */
   XFontStruct *xfont;
   XFontSet fontset;
 
@@ -458,21 +457,7 @@ gdk_char_width (GdkFont *font,
     case GDK_FONT_FONT:
       /* only 8 bits characters are considered here */
       xfont = (XFontStruct *) private->xfont;
-      if ((xfont->min_byte1 == 0) &&
-	  (xfont->max_byte1 == 0) &&
-	  (ch >= xfont->min_char_or_byte2) &&
-	  (ch <= xfont->max_char_or_byte2))
-	{
-	  chars = xfont->per_char;
-	  if (chars)
-	    width = chars[ch - xfont->min_char_or_byte2].width;
-	  else
-	    width = xfont->min_bounds.width;
-	}
-      else
-	{
-	  width = XTextWidth (xfont, &character, 1);
-	}
+      width = XTextWidth (xfont, &character, 1);
       break;
     case GDK_FONT_FONTSET:
       fontset = (XFontSet) private->xfont;
