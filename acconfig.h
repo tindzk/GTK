@@ -28,6 +28,7 @@
 #undef HAVE_SHAPE_EXT
 #undef HAVE_SYS_SELECT_H
 #undef HAVE_XCONVERTCASE
+#undef HAVE_CODESET
 
 #undef NO_FD_SET
 
