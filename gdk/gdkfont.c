@@ -27,6 +27,7 @@
 #include <X11/Xlib.h>
 #include <X11/Xos.h>
 #include <langinfo.h>
+#include <locale.h>
 #include "gdk.h"
 #include "gdkprivate.h"
 
@@ -187,9 +188,11 @@ gdk_fontset_load (const gchar *fontset_name)
       if (g_strcasecmp (codeset, "utf-8") != 0 &&
 	  g_strcasecmp (codeset, "utf8") != 0)
 	{
-	  g_warning ("Missing charsets in FontSet creation\n");
+	  g_printerr ("The font \"%s\" does not support all the required character sets for the current locale \"%s\"\n",
+		      fontset_name, setlocale (LC_ALL, NULL));
 	  for (i=0;i<missing_charset_count;i++)
-	    g_warning ("    %s\n", missing_charset_list[i]);
+	    g_printerr ("  (Missing character set \"%s\")\n",
+			missing_charset_list[i]);
 	}
       
       XFreeStringList (missing_charset_list);
