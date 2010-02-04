@@ -553,12 +553,12 @@ Window xwin = GDK_WINDOW_XWINDOW (GTK_WIDGET (my_window)->window);
 <BLOCKQUOTE><CODE>
 <PRE>
 gint
-signal_handler_event(GtkWiget *widget, GdkEvenButton *event, gpointer func_data)
+signal_handler_event(GtkWidget *widget, GdkEventButton *event, gpointer func_data)
 {
   if (GTK_IS_LIST_ITEM(widget) &amp;&amp;
        (event->type==GDK_2BUTTON_PRESS ||
         event->type==GDK_3BUTTON_PRESS) ) {
-    printf("I feel %s clicked on button %d\",
+    printf("I feel %s clicked on button %d\n",
            event->type==GDK_2BUTTON_PRESS ? "double" : "triple",
            event->button);
   }

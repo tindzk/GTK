@@ -99,6 +99,8 @@ FAQ_FILES=html/gtkfaq.html		\
 	html/gtkfaq-5.html       	\
 	html/gtkfaq-6.html       	\
 	html/gtkfaq-7.html		\
+	html/gtkfaq-8.html		\
+	html/gtkfaq-9.html		\
 	text/gtkfaq.txt
 
 .PHONY: html htmldir faq tutorial tutorial_it tutorial_fr files
