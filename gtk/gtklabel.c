@@ -56,6 +56,7 @@ struct _GtkLabelWord
   GtkLabelWord *next;
   gint uline_y;
   GtkLabelULine *uline;
+  gboolean paragraph_break;
 };
 
 struct _GtkLabelULine
@@ -396,6 +397,7 @@ gtk_label_word_alloc (void)
   word->beginning = NULL;
   word->next = NULL;
   word->uline = NULL;
+  word->paragraph_break = FALSE;
 
   return word;
 }
@@ -441,6 +443,7 @@ gtk_label_split_text (GtkLabel *label)
       if (str == label->label_wc || str[-1] == '\n')
 	{
 	  /* Paragraph break */
+	  word->paragraph_break = TRUE;
 	  word->space = 0;
 	  
 	  max_line_width = MAX (line_width, max_line_width);
@@ -488,6 +491,7 @@ gtk_label_split_text (GtkLabel *label)
     {
       word = gtk_label_word_alloc ();
       
+      word->paragraph_break = TRUE;
       word->space = 0;
       word->beginning = str;
       word->length = 0;
@@ -498,6 +502,13 @@ gtk_label_split_text (GtkLabel *label)
     }
   
   return MAX (line_width, max_line_width);
+}
+
+static gboolean
+is_ideogram (GdkWChar wc)
+{
+  return !(gdk_iswalnum (wc) || gdk_iswspace (wc) ||
+	   gdk_iswpunct (wc) || gdk_iswcntrl (wc));
 }
 
 /* this needs to handle white space better. */
@@ -526,6 +537,7 @@ gtk_label_split_text_wrapped (GtkLabel *label)
       if (str == label->label_wc || str[-1] == '\n')
 	{
 	  /* Paragraph break */
+	  word->paragraph_break = TRUE;
 	  word->space = 0;
 	  
 	  max_line_width = MAX (line_width, max_line_width);
@@ -546,10 +558,14 @@ gtk_label_split_text_wrapped (GtkLabel *label)
 	  else
 	    word->space = space_width * nspaces;
 	}
-      else
+      else if (gdk_iswspace (str[-1]))
 	{
 	  /* Regular inter-word space */
 	  word->space = space_width;
+	}
+      else
+	{
+	  word->space = 0;
 	}
       
       word->beginning = str;
@@ -557,13 +573,15 @@ gtk_label_split_text_wrapped (GtkLabel *label)
       p = word->beginning;
       while (*p && !gdk_iswspace (*p))
 	{
+	  if (word->length > 0 && (is_ideogram (p[-1]) || is_ideogram (*p)))
+	    break;
 	  word->length++;
 	  p++;
 	}
       word->width = gdk_text_width_wc (GTK_WIDGET (label)->style->font, str, word->length);
       
       str += word->length;
-      if (*str)
+      if (*str && gdk_iswspace (*str))
 	str++;
       
       line_width += word->space + word->width;
@@ -600,7 +618,7 @@ gtk_label_pick_width (GtkLabel *label,
   width = 0;
   for (word = label->words; word; word = word->next)
     {
-      if (word->space == 0
+      if (word->paragraph_break
 	  || (line_width
 	      && (line_width >= min_width
 		  || line_width + word->width + word->space > max_width)))
@@ -716,7 +734,8 @@ gtk_label_finalize_lines_wrap (GtkLabel       *label,
   GtkLabelWord *word, *line, *next_line;
   GtkWidget *widget;
   gchar *ptrn;
-  gint x, y, space, extra_width, add_space, baseline_skip;
+  gint x, y, space, num_words, extra_width, add_space, baseline_skip;
+  gboolean deliver_equivalently;
   
   g_return_if_fail (label->wrap);
   
@@ -724,20 +743,24 @@ gtk_label_finalize_lines_wrap (GtkLabel       *label,
   y = 0;
   baseline_skip = (GTK_WIDGET (label)->style->font->ascent +
 		   GTK_WIDGET (label)->style->font->descent + 1);
+  deliver_equivalently = FALSE;
   
   for (line = label->words; line != 0; line = next_line)
     {
-      space = 0;
+      space = num_words = 0;
       extra_width = max_line_width - line->width;
       
       for (next_line = line->next; next_line; next_line = next_line->next)
 	{
-	  if (next_line->space == 0)
+	  if (next_line->paragraph_break)
 	    break;		/* New paragraph */
 	  if (next_line->space + next_line->width > extra_width)
 	    break;
+	  if (next_line->space == 0)
+	    deliver_equivalently = TRUE; /* An ideogram is found. */
 	  extra_width -= next_line->space + next_line->width;
 	  space += next_line->space;
+	  num_words++;
 	}
       
       line->x = 0;
@@ -747,14 +770,18 @@ gtk_label_finalize_lines_wrap (GtkLabel       *label,
       
       for (word = line->next; word != next_line; word = word->next)
 	{
-	  if (next_line && next_line->space)
+	  if (next_line && !next_line->paragraph_break &&
+	      label->jtype == GTK_JUSTIFY_FILL &&
+	      (deliver_equivalently ? num_words : space) > 0)
 	    {
-	      /* Not last line of paragraph --- fill line if needed */
-	      if (label->jtype == GTK_JUSTIFY_FILL) {
+	      /* Not last line of paragraph --- fill line */
+	      if (deliver_equivalently)
+		add_space = (extra_width + num_words / 2) / num_words;
+	      else
 		add_space = (extra_width * word->space + space / 2) / space;
-		extra_width -= add_space;
-		space -= word->space;
-	      }
+	      extra_width -= add_space;
+	      space -= word->space;
+	      num_words--;
 	    }
 	  
 	  word->x = x + word->space + add_space;
@@ -925,7 +952,7 @@ gtk_label_expose (GtkWidget      *widget,
 
       for (word = label->words; word; word = word->next)
 	{
-	  gchar save = word->beginning[word->length];
+	  GdkWChar save = word->beginning[word->length];
 	  word->beginning[word->length] = '\0';
 	  gtk_label_paint_word (label, x, y, word, &event->area);
 	  word->beginning[word->length] = save;

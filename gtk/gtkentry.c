@@ -2036,11 +2036,21 @@ gtk_entry_move_word (GtkEditable *editable,
     }
 }
 
+static gboolean
+alnum_or_ideogram (GtkEntry *entry, guint index)
+{
+  GdkWChar ch;
+  ch = entry->text[index];
+  if (entry->use_wchar)
+    return !(gdk_iswpunct (ch) || gdk_iswcntrl (ch) || gdk_iswspace (ch));
+  else
+    return !(ispunct (ch) || iscntrl (ch) || isspace (ch));
+}
+
 static void
 gtk_move_forward_word (GtkEntry *entry)
 {
   GtkEditable *editable;
-  GdkWChar *text;
   gint i;
 
   editable = GTK_EDITABLE (entry);
@@ -2054,21 +2064,12 @@ gtk_move_forward_word (GtkEntry *entry)
 
   if (entry->text && (editable->current_pos < entry->text_length))
     {
-      text = entry->text;
-      i = editable->current_pos;
-	  
-      if ((entry->use_wchar) ? (!gdk_iswalnum (text[i])) : (!isalnum (text[i])))
-	for (; i < entry->text_length; i++)
-	  {
-	    if ((entry->use_wchar) ? gdk_iswalnum (text[i]) : isalnum (text[i]))
-	      break;
-	  }
-
+      for (i = editable->current_pos; i < entry->text_length; i++)
+	if (alnum_or_ideogram (entry, i))
+	  break;
       for (; i < entry->text_length; i++)
-	{
-	  if ((entry->use_wchar) ? (!gdk_iswalnum (text[i])) : (!isalnum (text[i])))
-	    break;
-	}
+	if (!alnum_or_ideogram (entry, i))
+	  break;
 
       editable->current_pos = i;
     }
@@ -2078,7 +2079,6 @@ static void
 gtk_move_backward_word (GtkEntry *entry)
 {
   GtkEditable *editable;
-  GdkWChar *text;
   gint i;
 
   editable = GTK_EDITABLE (entry);
@@ -2092,26 +2092,19 @@ gtk_move_backward_word (GtkEntry *entry)
 
   if (entry->text && editable->current_pos > 0)
     {
-      text = entry->text;
-      i = editable->current_pos - 1;
-      if ((entry->use_wchar) ? (!gdk_iswalnum (text[i])) : (!isalnum (text[i])))
-	for (; i >= 0; i--)
-	  {
-	    if ((entry->use_wchar) ? gdk_iswalnum (text[i]) : isalnum (text[i]))
-	      break;
-	  }
+      for (i = editable->current_pos - 1; i >= 0; i--)
+	if (alnum_or_ideogram (entry, i))
+	  break;
       for (; i >= 0; i--)
-	{
-	  if ((entry->use_wchar) ? (!gdk_iswalnum (text[i])) : (!isalnum (text[i])))
-	    {
-	      i++;
-	      break;
-	    }
-	}
-	  
+	if (!alnum_or_ideogram (entry, i))
+	  {
+	    i++;
+	    break;
+	  }
+
       if (i < 0)
 	i = 0;
-	  
+  
       editable->current_pos = i;
     }
 }

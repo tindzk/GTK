@@ -51,4 +51,32 @@
 #  define gdk_iswspace(c) ((wchar_t)(c) <= 0xFF && isspace(c))
 #endif
 
+/* The following 9 macros are added in gtk+ 1.2.X. Don't use them without
+ * checking GTK_CHECK_VERSION. For example,
+ *	#if GTK_CHECK_VERSION (1,2,X)
+ *	    ... code which uses gdk_iswalpha(), gdk_iswcntrl(), etc. ...
+ *      #endif
+ */
+#if !defined(G_HAVE_BROKEN_WCTYPE) && (defined(G_HAVE_WCTYPE_H) || defined(G_HAVE_WCHAR_H)) && !defined(X_LOCALE)
+#  define gdk_iswalpha(c)  iswalpha(c)
+#  define gdk_iswcntrl(c)  iswcntrl(c)
+#  define gdk_iswdigit(c)  iswdigit(c)
+#  define gdk_iswlower(c)  iswlower(c)
+#  define gdk_iswgraph(c)  iswgraph(c)
+#  define gdk_iswprint(c)  iswprint(c)
+#  define gdk_iswpunct(c)  iswpunct(c)
+#  define gdk_iswupper(c)  iswupper(c)
+#  define gdk_iswxdigit(c) iswxdigit(c)
+#else
+#  define gdk_iswalpha(c)  ((wchar_t)(c) <= 0xFF && isalpha(c))
+#  define gdk_iswcntrl(c)  ((wchar_t)(c) <= 0xFF && iscntrl(c))
+#  define gdk_iswdigit(c)  ((wchar_t)(c) <= 0xFF && isdigit(c))
+#  define gdk_iswlower(c)  ((wchar_t)(c) <= 0xFF && islower(c))
+#  define gdk_iswgraph(c)  ((wchar_t)(c) >  0xFF || isgraph(c))
+#  define gdk_iswprint(c)  ((wchar_t)(c) >  0xFF || isprint(c))
+#  define gdk_iswpunct(c)  ((wchar_t)(c) <= 0xFF && ispunct(c))
+#  define gdk_iswupper(c)  ((wchar_t)(c) <= 0xFF && isupper(c))
+#  define gdk_iswxdigit(c) ((wchar_t)(c) <= 0xFF && isxdigit(c))
+#endif
+
 #endif /* __GDK_I18N_H__ */

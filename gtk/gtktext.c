@@ -101,6 +101,13 @@ enum {
   ARG_WORD_WRAP
 };
 
+typedef enum {
+  CHAR_CLASS_SPACE,
+  CHAR_CLASS_ALNUM,
+  CHAR_CLASS_IDEOGRAM,
+  CHAR_CLASS_OTHERS     /* punct, cntrl */
+} CharClass;
+
 typedef struct _TextProperty          TextProperty;
 typedef struct _TabStopMark           TabStopMark;
 typedef struct _PrevTabCont           PrevTabCont;
@@ -300,6 +307,8 @@ static LineParams find_line_params (GtkText* text,
 				    const GtkPropertyMark *mark,
 				    const PrevTabCont *tab_cont,
 				    PrevTabCont *next_cont);
+static void find_word_wrap_position (GtkText* text, LineParams *lp);
+static CharClass char_class (GtkText* text, guint index);
 static void recompute_geometry (GtkText* text);
 static void insert_expose (GtkText* text, guint old_pixels, gint nchars, guint new_line_count);
 static void delete_expose (GtkText* text,
@@ -4111,27 +4120,21 @@ gtk_text_move_forward_word (GtkText *text)
   
   undraw_cursor (text, FALSE);
   
-  if (text->use_wchar)
+  while (!LAST_INDEX (text, text->cursor_mark))
     {
-      while (!LAST_INDEX (text, text->cursor_mark) && 
-	     !gdk_iswalnum (GTK_TEXT_INDEX(text, text->cursor_mark.index)))
-	advance_mark (&text->cursor_mark);
-      
-      while (!LAST_INDEX (text, text->cursor_mark) && 
-	     gdk_iswalnum (GTK_TEXT_INDEX(text, text->cursor_mark.index)))
-	advance_mark (&text->cursor_mark);
+      CharClass cc = char_class (text, text->cursor_mark.index);
+      if (cc == CHAR_CLASS_ALNUM || cc == CHAR_CLASS_IDEOGRAM)
+	break;
+      advance_mark (&text->cursor_mark);
     }
-  else
+  while (!LAST_INDEX (text, text->cursor_mark))
     {
-      while (!LAST_INDEX (text, text->cursor_mark) && 
-	     !isalnum (GTK_TEXT_INDEX(text, text->cursor_mark.index)))
-	advance_mark (&text->cursor_mark);
-      
-      while (!LAST_INDEX (text, text->cursor_mark) && 
-	     isalnum (GTK_TEXT_INDEX(text, text->cursor_mark.index)))
-	advance_mark (&text->cursor_mark);
+      CharClass cc = char_class (text, text->cursor_mark.index);
+      if (cc != CHAR_CLASS_ALNUM && cc != CHAR_CLASS_IDEOGRAM)
+	break;
+      advance_mark (&text->cursor_mark);
     }
-  
+
   find_cursor (text, TRUE);
   draw_cursor (text, FALSE);
 }
@@ -4143,25 +4146,19 @@ gtk_text_move_backward_word (GtkText *text)
   
   undraw_cursor (text, FALSE);
   
-  if (text->use_wchar)
+  while (text->cursor_mark.index > 0)
     {
-      while ((text->cursor_mark.index > 0) &&
-	     !gdk_iswalnum (GTK_TEXT_INDEX(text, text->cursor_mark.index-1)))
-	decrement_mark (&text->cursor_mark);
-      
-      while ((text->cursor_mark.index > 0) &&
-	     gdk_iswalnum (GTK_TEXT_INDEX(text, text->cursor_mark.index-1)))
-	decrement_mark (&text->cursor_mark);
+      CharClass cc = char_class (text, text->cursor_mark.index - 1);
+      if (cc == CHAR_CLASS_ALNUM || cc == CHAR_CLASS_IDEOGRAM)
+	break;
+      decrement_mark (&text->cursor_mark);
     }
-  else
+  while (text->cursor_mark.index > 0)
     {
-      while ((text->cursor_mark.index > 0) &&
-	     !isalnum (GTK_TEXT_INDEX(text, text->cursor_mark.index-1)))
-	decrement_mark (&text->cursor_mark);
-      
-      while ((text->cursor_mark.index > 0) &&
-	     isalnum (GTK_TEXT_INDEX(text, text->cursor_mark.index-1)))
-	decrement_mark (&text->cursor_mark);
+      CharClass cc = char_class (text, text->cursor_mark.index - 1);
+      if (cc != CHAR_CLASS_ALNUM && cc != CHAR_CLASS_IDEOGRAM)
+	break;
+      decrement_mark (&text->cursor_mark);
     }
   
   find_cursor (text, TRUE);
@@ -4782,27 +4779,8 @@ find_line_params (GtkText* text,
 		      GtkPropertyMark saved_mark = lp.end;
 		      guint saved_characters = lp.displayable_chars;
 		      
-		      lp.displayable_chars += 1;
-		      
-		      if (text->use_wchar)
-			{
-			  while (!gdk_iswspace (GTK_TEXT_INDEX (text, lp.end.index)) &&
-				 (lp.end.index > lp.start.index))
-			    {
-			      decrement_mark (&lp.end);
-			      lp.displayable_chars -= 1;
-			    }
-			}
-		      else
-			{
-			  while (!isspace(GTK_TEXT_INDEX (text, lp.end.index)) &&
-				 (lp.end.index > lp.start.index))
-			    {
-			      decrement_mark (&lp.end);
-			      lp.displayable_chars -= 1;
-			    }
-			}
-		      
+		      find_word_wrap_position (text, &lp);
+
 		      /* If whole line is one word, revert to char wrapping */
 		      if (lp.end.index == lp.start.index)
 			{
@@ -4848,6 +4826,54 @@ find_line_params (GtkText* text,
   lp.tab_cont_next = *next_cont;
   
   return lp;
+}
+
+static CharClass
+char_class (GtkText* text, guint index)
+{
+  GdkWChar wc;
+  wc = GTK_TEXT_INDEX (text, index);
+  if (text->use_wchar)
+    {
+      if (gdk_iswspace (wc))
+	return CHAR_CLASS_SPACE;
+      else if (gdk_iswalnum (wc))
+	return CHAR_CLASS_ALNUM;
+      else if (gdk_iswpunct (wc) || gdk_iswcntrl (wc))
+	return CHAR_CLASS_OTHERS;
+      else
+	return CHAR_CLASS_IDEOGRAM;
+    }
+  else
+    {
+      if (isspace (wc))
+	return CHAR_CLASS_SPACE;
+      else if (isalnum (wc))
+	return CHAR_CLASS_ALNUM;
+      else if (ispunct (wc) || iscntrl (wc))
+	return CHAR_CLASS_OTHERS;
+      else
+	return CHAR_CLASS_IDEOGRAM;
+    }
+}
+
+static void
+find_word_wrap_position (GtkText* text, LineParams *lp)
+{
+  while (lp->end.index > lp->start.index &&
+	 char_class (text, lp->end.index) != CHAR_CLASS_SPACE &&
+	 char_class (text, lp->end.index) != CHAR_CLASS_IDEOGRAM &&
+	 char_class (text, lp->end.index - 1) != CHAR_CLASS_IDEOGRAM)
+    {
+      decrement_mark (&lp->end);
+      lp->displayable_chars -= 1;
+    }
+
+  /* lp->end.index points the position to be cut just now. If it's not a
+   * space, move it to the next display line. */
+  if (lp->end.index > lp->start.index &&
+      char_class (text, lp->end.index) != CHAR_CLASS_SPACE)
+    decrement_mark (&lp->end);
 }
 
 static void
