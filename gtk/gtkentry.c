@@ -2274,10 +2274,12 @@ gtk_entry_set_selection (GtkEditable       *editable,
 			 gint               start,
 			 gint               end)
 {
-  gint length = GTK_ENTRY (editable)->text_length;
+  gint length;
   
   g_return_if_fail (editable != NULL);
   g_return_if_fail (GTK_IS_ENTRY (editable));
+
+  length = GTK_ENTRY (editable)->text_length;
 
   if (end < 0)
     end = length;
