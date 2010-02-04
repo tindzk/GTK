@@ -1609,9 +1609,11 @@ gtk_font_selection_select_best_size(GtkFontSelection *fontsel)
   
   if (found)
     {
-      fontsel->size = best_size;
-      gtk_clist_moveto(GTK_CLIST(fontsel->size_clist), best_row, -1, 0.5, 0);
-      gtk_clist_select_row(GTK_CLIST(fontsel->size_clist), best_row, 0);
+		if (best_size != fontsel->selected_size) {
+			fontsel->size = best_size;
+			gtk_clist_moveto(GTK_CLIST(fontsel->size_clist), best_row, -1, 0.5, 0);
+			gtk_clist_select_row(GTK_CLIST(fontsel->size_clist), best_row, 0);
+		}
     }
   else
     {
