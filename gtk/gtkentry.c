@@ -1184,6 +1184,7 @@ gtk_entry_key_press (GtkWidget   *widget,
 	}
       break;
     case GDK_Return:
+    case GDK_KP_Enter:
       return_val = TRUE;
       gtk_widget_activate (widget);
       break;

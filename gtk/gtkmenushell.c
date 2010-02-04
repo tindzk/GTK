@@ -258,6 +258,11 @@ gtk_menu_shell_class_init (GtkMenuShellClass *klass)
 				GTK_TYPE_BOOL,
 				TRUE);
   gtk_binding_entry_add_signal (binding_set,
+				GDK_KP_Enter, 0,
+				"activate_current", 1,
+				GTK_TYPE_BOOL,
+				TRUE);
+  gtk_binding_entry_add_signal (binding_set,
 				GDK_space, 0,
 				"activate_current", 1,
 				GTK_TYPE_BOOL,

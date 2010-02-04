@@ -1369,6 +1369,7 @@ gtk_notebook_key_press (GtkWidget   *widget,
 	gtk_notebook_switch_focus_tab (notebook, list);
       return TRUE;
     case GDK_Return:
+    case GDK_KP_Enter:
     case GDK_space:
       gtk_notebook_page_select (GTK_NOTEBOOK (widget));
       return TRUE;
