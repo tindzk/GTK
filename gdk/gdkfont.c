@@ -26,6 +26,7 @@
 
 #include <X11/Xlib.h>
 #include <X11/Xos.h>
+#include <langinfo.h>
 #include "gdk.h"
 #include "gdkprivate.h"
 
@@ -173,9 +174,24 @@ gdk_fontset_load (const gchar *fontset_name)
   if (missing_charset_count)
     {
       gint i;
-      g_warning ("Missing charsets in FontSet creation\n");
-      for (i=0;i<missing_charset_count;i++)
-	g_warning ("    %s\n", missing_charset_list[i]);
+      const char *codeset;
+
+      codeset = nl_langinfo (CODESET);
+
+      /* Hack - UTF-8 is likely to be rendered with a list of
+       * possible legacy fallback charsets, so a failure here
+       * shouldn't be warned about. But we don't want to suppress
+       * this warning in general, since for other character sets
+       * it gives a useful indication of what went wrong.
+       */
+      if (g_strcasecmp (codeset, "utf-8") != 0 &&
+	  g_strcasecmp (codeset, "utf8") != 0)
+	{
+	  g_warning ("Missing charsets in FontSet creation\n");
+	  for (i=0;i<missing_charset_count;i++)
+	    g_warning ("    %s\n", missing_charset_list[i]);
+	}
+      
       XFreeStringList (missing_charset_list);
     }
 
