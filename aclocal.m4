@@ -56,10 +56,7 @@ AC_REQUIRE([AC_PROG_NM])dnl
 AC_REQUIRE([AC_PROG_LN_S])dnl
 dnl
 
-case "$target" in
-NONE) lt_target="$host" ;;
-*) lt_target="$target" ;;
-esac
+lt_target="$host"
 
 # Check for any special flags to pass to ltconfig.
 libtool_flags="--cache-file=$cache_file"
