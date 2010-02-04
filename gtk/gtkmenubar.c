@@ -217,6 +217,8 @@ gtk_menu_bar_size_request (GtkWidget      *widget,
   GList *children;
   gint nchildren;
   GtkRequisition child_requisition;
+  gint xthickness;
+  gint ythickness;
 
   g_return_if_fail (widget != NULL);
   g_return_if_fail (GTK_IS_MENU_BAR (widget));
@@ -256,12 +258,21 @@ gtk_menu_bar_size_request (GtkWidget      *widget,
 	    }
 	}
 
+      if (menu_bar->shadow_type == GTK_SHADOW_NONE)
+	{
+	  xthickness = 0;
+	  ythickness = 0;
+	}
+      else
+	{
+	  xthickness = widget->style->klass->xthickness;
+	  ythickness = widget->style->klass->ythickness;
+	}
+
       requisition->width += (GTK_CONTAINER (menu_bar)->border_width +
-			     widget->style->klass->xthickness +
-			     BORDER_SPACING) * 2;
+			     xthickness + BORDER_SPACING) * 2;
       requisition->height += (GTK_CONTAINER (menu_bar)->border_width +
-			      widget->style->klass->ythickness +
-			      BORDER_SPACING) * 2;
+			      ythickness + BORDER_SPACING) * 2;
 
       if (nchildren > 0)
 	requisition->width += 2 * CHILD_SPACING * (nchildren - 1);
@@ -279,6 +290,8 @@ gtk_menu_bar_size_allocate (GtkWidget     *widget,
   GtkAllocation child_allocation;
   GtkRequisition child_requisition;
   guint offset;
+  gint xthickness;
+  gint ythickness;
   
   g_return_if_fail (widget != NULL);
   g_return_if_fail (GTK_IS_MENU_BAR (widget));
@@ -295,14 +308,23 @@ gtk_menu_bar_size_allocate (GtkWidget     *widget,
 
   if (menu_shell->children)
     {
+      if (menu_bar->shadow_type == GTK_SHADOW_NONE)
+	{
+	  xthickness = 0;
+	  ythickness = 0;
+	}
+      else
+	{
+	  xthickness = widget->style->klass->xthickness;
+	  ythickness = widget->style->klass->ythickness;
+	}
+
       child_allocation.x = (GTK_CONTAINER (menu_bar)->border_width +
-			    widget->style->klass->xthickness +
-			    BORDER_SPACING);
+			    xthickness + BORDER_SPACING);
       offset = child_allocation.x; 	/* Window edge to menubar start */
 
       child_allocation.y = (GTK_CONTAINER (menu_bar)->border_width +
-			    widget->style->klass->ythickness +
-			    BORDER_SPACING);
+			    ythickness + BORDER_SPACING);
       child_allocation.height = MAX (1, (gint)allocation->height - child_allocation.y * 2);
 
       children = menu_shell->children;
